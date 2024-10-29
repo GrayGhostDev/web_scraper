@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.streamlit/secrets.toml
+scraper_cache/
+screenshots/
+saved_html/
+*.log
