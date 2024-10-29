@@ -14,3 +14,5 @@ scraper_cache/
 screenshots/
 saved_html/
 *.log
+chromeDriver/
+*.app
