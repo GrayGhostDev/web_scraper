@@ -83,66 +83,42 @@ class ScrapingResult:
     screenshots: Optional[List[str]] = None
     html_path: Optional[str] = None
 
+
+@dataclass
+# Modify BrightDataConfig and ProxyManager to ensure better handling
+class BrightDataConfig:
+    def get_selenium_url(self) -> str:
+        """Get Selenium-compatible URL for proxy"""
+        if not all([self.customer_id, self.zone, self.country, self.password]):
+            raise ValueError("BrightDataConfig missing required credentials.")
+        credentials = f"{self.customer_id}-zone-{self.zone}-country-{self.country}:{self.password}"
+        return f"https://{credentials}@{self.host}:{self.port}"
+
+# Ensure get_chrome_driver includes necessary error handling
 class ProxyManager:
-    def __init__(self):
-        self.proxies = []
-        self.current_index = 0
-        self.proxy_test_url = "http://www.google.com"
-        self.test_timeout = 10
+    def get_chrome_driver(self, use_bright_data: bool = True):
+        """Return a Chrome WebDriver instance"""
+        chrome_options = ChromeOptions()
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--disable-dev-shm-usage')
 
-    def add_proxy(self, proxy):
-        """Add a proxy to the rotation after testing"""
-        if not validators.url(proxy):
-            return False
-
-        if self.test_proxy(proxy):
-            self.proxies.append(proxy)
-            return True
-        return False
-
-    def test_proxy(self, proxy):
-        """Test if proxy is working"""
+        # Bright Data or Regular Proxy
         try:
-            proxies = {
-                'http': proxy,
-                'https': proxy
-            }
-            response = requests.get(
-                self.proxy_test_url,
-                proxies=proxies,
-                timeout=self.test_timeout
-            )
-            return response.status_code == 200
-        except:
-            return False
-
-    def get_next_proxy(self):
-        """Get the next working proxy from the rotation"""
-        if not self.proxies:
+            if use_bright_data and self.bright_data_config:
+                return webdriver.Remote(
+                    command_executor=self.bright_data_config.get_selenium_url(),
+                    options=chrome_options
+                )
+            else:
+                proxy = self.get_next_proxy()
+                if proxy:
+                    chrome_options.add_argument(f'--proxy-server={proxy}')
+                service = Service(ChromeDriverManager().install())
+                return webdriver.Chrome(service=service, options=chrome_options)
+        except Exception as e:
+            logger.error(f"Error setting up WebDriver: {e}")
             return None
-
-        attempts = 0
-        while attempts < len(self.proxies):
-            proxy = self.proxies[self.current_index]
-            self.current_index = (self.current_index + 1) % len(self.proxies)
-
-            if self.test_proxy(proxy):
-                return proxy
-
-            attempts += 1
-
-        return None
-
-    def remove_proxy(self, proxy):
-        """Remove a proxy from the rotation"""
-        if proxy in self.proxies:
-            self.proxies.remove(proxy)
-            return True
-        return False
-
-    def get_working_proxies(self):
-        """Get list of currently working proxies"""
-        return [proxy for proxy in self.proxies if self.test_proxy(proxy)]
 
 class DataValidator:
     @staticmethod

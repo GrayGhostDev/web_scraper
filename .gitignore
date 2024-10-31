@@ -15,4 +15,4 @@ screenshots/
 saved_html/
 *.log
 chromeDriver/
-*.app
+*.app!/chromeDriver/
