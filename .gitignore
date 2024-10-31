@@ -16,3 +16,4 @@ saved_html/
 *.log
 chromeDriver/
 *.app!/chromeDriver/
+chromeDriver/
